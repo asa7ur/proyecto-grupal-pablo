@@ -1,36 +1,55 @@
-<!doctype html>
-<html>
-  <head>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔬 Célula Eucariota - Multi-Fetch Panel</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🔬 Célula Eucariota</h1>
+    <p>Monitorización Global de Guardias y Ausencias</p>
+  </div>
+
+  <div class="container">
     <div class="control-panel">
-      <label>📅 Selecciona Día:</label>
-      <select id="selDia" onchange="cargarDatos()"></select>
-      <span id="latencyStats" class="latency-display" style="display: none"
-        >⏱️ -- ms</span
-      >
+      <div class="top-row">
+        <div class="selector-group">
+          <label for="selDia">📅 Día:</label>
+          <select id="selDia" onchange="cargarDatos()">
+            </select>
+        </div>
+        <div id="latencyStats" class="latency-box"></div>
+      </div>
+
+      <div class="fetch-toolbar">
+        <span class="toolbar-label">Seleccionar Fuente de Datos:</span>
+        <div class="button-group">
+          <button class="btn btn-csv" onclick="fetchCSV()">📄 CSV (Sheets)</button>
+          <button class="btn btn-apps" onclick="cargarDatos()">☁️ Apps Script</button>
+          <button class="btn btn-mysql" onclick="fetchMySQL()">🐬 MySQL</button>
+          <button class="btn btn-mongo" onclick="fetchMongo()">🍃 MongoDB</button>
+        </div>
+      </div>
     </div>
 
-    <table id="mainTable">
-      <thead>
-        <tr>
-          <th class="col-izq">Horario & Guardias Disponibles</th>
-          <th class="col-der">Ausencias</th>
-        </tr>
-      </thead>
-      <tbody id="tbody">
-        <tr>
-          <td
-            colspan="2"
-            style="text-align: center; padding: 40px; color: #888"
-          >
-            Iniciando sistema...
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Periodo / Guardia</th>
+            <th>Profesores Ausentes</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          </tbody>
+      </table>
+    </div>
+  </div>
 
-    <script src="script.js"></script>
-  </body>
+  <script src="script.js"></script>
+</body>
 </html>

@@ -1,137 +1,205 @@
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbz6veJ_02mh-L1-LmzJTfQpFgUBHKKg3MN__4OQ_NHleaaS2gFz_Yy-CNwqDgNi5jQwzw/exec";
+// ==========================================
+// 1. CONFIGURACIÓN Y VARIABLES GLOBALES
+// ==========================================
 
-const ORDEN_VISUAL = [
-  "1ª Hora",
-  "2ª Hora",
-  "3ª Hora",
-  "Recreo",
-  "4ª Hora",
-  "5ª Hora",
-  "6ª Hora",
-];
+// URLs de las distintas fuentes de datos
+const API_URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbz6veJ_02mh-L1-LmzJTfQpFgUBHKKg3MN__4OQ_NHleaaS2gFz_Yy-CNwqDgNi5jQwzw/exec"; //
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRLBHYrwNyk20UoDwqBu-zfDXWSyeRtsg536axelI0eEHYsovoMiwgoS82tjGRy6Tysw3Pj6ovDiyzo/pub?gid=1908899796&single=true&output=csv';
+const BASE_URL_LOCAL = "http://localhost:3000"; // Puerto común para servidores locales
 
-window.onload = function () {
-  generarDias();
-  cargarDatos();
-};
+const ORDEN_VISUAL = ["1ª Hora", "2ª Hora", "3ª Hora", "Recreo", "4ª Hora", "5ª Hora", "6ª Hora"]; //
 
-function cargarDatos() {
-  const dia = document.getElementById("selDia").value;
-  const tbody = document.getElementById("tbody");
-  const latencyBox = document.getElementById("latencyStats");
+// Inicialización de Socket.io para tiempo real (Grupo Los Moteros)
+// Nota: Requiere haber incluido <script src="/socket.io/socket.io.js"></script> en el HTML
+const socket = typeof io !== 'undefined' ? io(BASE_URL_LOCAL) : null;
 
-  tbody.innerHTML =
-    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando base de datos...</td></tr>';
-
-  const startTime = performance.now();
-  latencyBox.style.display = "none";
-
-  fetch(API_URL + "?dia=" + dia)
-    .then((r) => r.json())
-    .then((data) => {
-      const endTime = performance.now();
-      const duration = (endTime - startTime).toFixed(0);
-
-      latencyBox.innerText = `⏱️ Ping: ${duration} ms`;
-      latencyBox.style.display = "inline-block";
-
-      tbody.innerHTML = "";
-
-      if (data.status === "error") {
-        tbody.innerHTML = `<tr><td colspan="2" style="color:red; text-align:center; padding:20px;">Error: ${data.message}</td></tr>`;
-        return;
-      }
-
-      let agenda = {};
-      const initHora = (h) => {
-        if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
-      };
-
-      data.guardias.forEach((item) => {
-        initHora(item.hora);
-        agenda[item.hora].guardias = item.profesores;
-      });
-
-      data.faltas.forEach((item) => {
-        initHora(item.hora);
-        agenda[item.hora].faltas.push({
-          profe: item.profesor,
-          aula: item.aula,
-        });
-      });
-
-      let horasPresentes = Object.keys(agenda);
-
-      if (horasPresentes.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:40px; color:#137333; font-weight:bold;">✅ Agenda libre: No hay incidencias registradas para el ${dia}.</td></tr>`;
-        return;
-      }
-
-      horasPresentes.sort((a, b) => {
-        let idxA = ORDEN_VISUAL.indexOf(a);
-        let idxB = ORDEN_VISUAL.indexOf(b);
-        if (idxA === -1) idxA = 999;
-        if (idxB === -1) idxB = 999;
-        return idxA - idxB;
-      });
-
-      horasPresentes.forEach((hora) => {
-        let info = agenda[hora];
-        let tr = document.createElement("tr");
-
-        let htmlGuardias = "";
-        if (info.guardias.length > 0) {
-          htmlGuardias = '<ul class="guard-list">';
-          info.guardias.forEach((p) => (htmlGuardias += `<li>${p}</li>`));
-          htmlGuardias += "</ul>";
-        } else {
-          htmlGuardias =
-            '<span class="no-guards">⚠️ ALERTA: NADIE DISPONIBLE</span>';
-        }
-
-        let celdaIzq = `
-            <span class="periodo-display">${hora}</span>
-            <div style="font-size:12px; font-weight:bold; color:#888; margin-bottom:5px; text-transform:uppercase;">Profesorado de Guardia:</div>
-            ${htmlGuardias}
-          `;
-
-        let htmlFaltas = "";
-        if (info.faltas.length > 0) {
-          info.faltas.forEach((f) => {
-            htmlFaltas += `
-                <div class="falta-card">
-                  <span class="falta-profe">👤 ${f.profe}</span>
-                  <span class="falta-aula">📍 ${f.aula}</span>
-                </div>`;
-          });
-        } else {
-          htmlFaltas = '<span class="sin-faltas">✅ Sin incidencias</span>';
-        }
-
-        tr.innerHTML = `
-            <td width="40%">${celdaIzq}</td>
-            <td width="60%">${htmlFaltas}</td>
-          `;
-        tbody.appendChild(tr);
-      });
-    })
-    .catch((e) => {
-      console.error(e);
-      tbody.innerHTML =
-        '<tr><td colspan="2" style="color:red; text-align:center;">Error de conexión. Verifica la URL del Script.</td></tr>';
+if (socket) {
+    socket.on("connect", () => console.log("🟢 Conectado al servidor de tiempo real"));
+    socket.on("datos-actualizados", () => {
+        console.log("⚡ Cambio detectado en BD. Recargando...");
+        fetchMongo(); // Recarga automáticamente si estamos en modo Mongo
     });
 }
 
+// ==========================================
+// 2. INICIO Y UTILIDADES
+// ==========================================
+
+window.onload = function () {
+    generarDias();
+    cargarDatos(); // Carga inicial por defecto (Apps Script)
+};
+
 function generarDias() {
-  const select = document.getElementById("selDia");
-  const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
-  const hoyIdx = new Date().getDay();
-  dias.forEach((d, i) => {
-    let opt = document.createElement("option");
-    opt.value = d;
-    opt.text = d;
-    if (i + 1 === hoyIdx || (hoyIdx === 0 && i === 0)) opt.selected = true;
-    select.add(opt);
-  });
+    const select = document.getElementById("selDia");
+    const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
+    const hoyIdx = new Date().getDay();
+    dias.forEach((d, i) => {
+        let opt = document.createElement("option");
+        opt.value = d;
+        opt.text = d;
+        if (i + 1 === hoyIdx || (hoyIdx === 0 && i === 0)) opt.selected = true;
+        select.add(opt);
+    });
+}
+
+// ==========================================
+// 3. MÉTODOS DE FETCH (LAS 4 FUENTES)
+// ==========================================
+
+// --- A. GOOGLE APPS SCRIPT (Original) ---
+function cargarDatos() {
+    const dia = document.getElementById("selDia").value;
+    const tbody = document.getElementById("tbody");
+    const latencyBox = document.getElementById("latencyStats");
+
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:40px;">🔄 Consultando Apps Script...</td></tr>';
+    const startTime = performance.now();
+
+    fetch(`${API_URL_APPS_SCRIPT}?dia=${dia}`)
+        .then(r => r.json())
+        .then(data => {
+            mostrarLatencia(startTime, latencyBox);
+            let agenda = {};
+            const initH = h => { if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] }; };
+
+            data.guardias.forEach(item => {
+                initH(item.hora);
+                agenda[item.hora].guardias = item.profesores;
+            });
+            data.faltas.forEach(item => {
+                initH(item.hora);
+                agenda[item.hora].faltas.push({ profe: item.profesor, aula: item.aula });
+            });
+            renderizarTablaDesdeObjeto(agenda);
+        })
+        .catch(e => errorTabla("Error al conectar con Apps Script"));
+}
+
+// --- B. CSV / GOOGLE SHEETS ---
+async function fetchCSV() {
+    const diaSel = document.getElementById("selDia").value;
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">📄 Procesando CSV...</td></tr>';
+
+    try {
+        const res = await fetch(CSV_URL);
+        const text = await res.text();
+        const filas = text.split('\n').slice(1);
+        let agenda = {};
+
+        filas.forEach(linea => {
+            const [dia, orden, rango, tipo, profesor, ubi] = linea.split(',').map(s => s?.trim());
+            if (dia === diaSel) {
+                const hKey = `${orden}ª Hora`;
+                if (!agenda[hKey]) agenda[hKey] = { guardias: [], faltas: [] };
+                if (tipo?.toUpperCase() === 'AUSENCIA') {
+                    agenda[hKey].faltas.push({ profe: profesor, aula: ubi || "N/A" });
+                } else {
+                    agenda[hKey].guardias.push(profesor);
+                }
+            }
+        });
+        renderizarTablaDesdeObjeto(agenda);
+    } catch (e) { errorTabla("Error al leer el CSV"); }
+}
+
+// --- C. MYSQL (JOTASONES) ---
+async function fetchMySQL() {
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">🐬 Consultando MySQL Local...</td></tr>';
+    
+    const fecha = new Date().toISOString().split('T')[0];
+    try {
+        const res = await fetch(`${BASE_URL_LOCAL}/api/panel?fecha=${fecha}`);
+        const data = await res.json();
+        
+        let agenda = {};
+        data.guardias.forEach(g => {
+            const h = `${g.hora}ª Hora`;
+            if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
+            agenda[h].guardias.push(g.profesor);
+        });
+        data.ausencias.forEach(a => {
+            const h = `${a.hora}ª Hora`;
+            if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
+            agenda[h].faltas.push({ profe: a.profesor, aula: a.aula });
+        });
+        renderizarTablaDesdeObjeto(agenda);
+    } catch (e) { errorTabla("¿Está encendido el servidor MySQL (Jotasones)?"); }
+}
+
+// --- D. MONGODB / REAL TIME (LOS MOTEROS) ---
+async function fetchMongo() {
+    const tbody = document.getElementById("tbody");
+    const dia = document.getElementById("selDia").value;
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">🍃 Consultando MongoDB...</td></tr>';
+
+    try {
+        const fecha = new Date().toISOString().split('T')[0];
+        const res = await fetch(`${BASE_URL_LOCAL}/api/panel?diaSemana=${dia}&fecha=${fecha}`); //
+        const data = await res.json();
+        
+        let agenda = {};
+        const formatH = h => h.includes('º') ? h.replace('º', 'ª Hora') : h;
+
+        data.guardias.forEach(g => {
+            const h = formatH(g.hora);
+            if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
+            agenda[h].guardias.push(`${g.profesor.nombre} ${g.profesor.apellidos}`); //
+        });
+        data.ausencias.forEach(a => {
+            const h = formatH(a.hora);
+            if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
+            agenda[h].faltas.push({ profe: `${a.profesor.nombre} ${a.profesor.apellidos}`, aula: a.grupo }); //
+        });
+        renderizarTablaDesdeObjeto(agenda);
+    } catch (e) { errorTabla("¿Está encendido el servidor Mongo (Los Moteros)?"); }
+}
+
+// ==========================================
+// 4. SISTEMA DE RENDERIZADO COMÚN
+// ==========================================
+
+function renderizarTablaDesdeObjeto(agenda) {
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = "";
+    let horas = Object.keys(agenda).sort((a, b) => {
+        let idxA = ORDEN_VISUAL.indexOf(a);
+        let idxB = ORDEN_VISUAL.indexOf(b);
+        return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+    });
+
+    if (horas.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:40px;">✅ Sin incidencias registradas.</td></tr>';
+        return;
+    }
+
+    horas.forEach(hora => {
+        const info = agenda[hora];
+        const tr = document.createElement("tr");
+
+        const htmlG = info.guardias.length > 0 
+            ? `<ul class="guard-list">${info.guardias.map(p => `<li>${p}</li>`).join('')}</ul>`
+            : '<span class="no-guards">⚠️ ALERTA: NADIE DISPONIBLE</span>';
+
+        const htmlF = info.faltas.length > 0
+            ? info.faltas.map(f => `<div class="falta-card"><span class="falta-profe">👤 ${f.profe}</span><span class="falta-aula">📍 ${f.aula}</span></div>`).join('')
+            : '<span class="sin-faltas">✅ Sin incidencias</span>';
+
+        tr.innerHTML = `<td width="40%"><span class="periodo-display">${hora}</span><div class="label-mini">Guardia:</div>${htmlG}</td>
+                        <td width="60%">${htmlF}</td>`;
+        tbody.appendChild(tr);
+    });
+}
+
+function mostrarLatencia(start, box) {
+    if (box) {
+        box.innerText = `⏱️ Ping: ${(performance.now() - start).toFixed(0)} ms`;
+        box.style.display = "inline-block";
+    }
+}
+
+function errorTabla(msg) {
+    document.getElementById("tbody").innerHTML = `<tr><td colspan="2" style="color:red; text-align:center; padding:20px;">❌ ${msg}</td></tr>`;
 }
