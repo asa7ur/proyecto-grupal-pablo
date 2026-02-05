@@ -3,21 +3,26 @@
 // ==========================================
 
 // URLs de las distintas fuentes de datos
-const API_URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbz6veJ_02mh-L1-LmzJTfQpFgUBHKKg3MN__4OQ_NHleaaS2gFz_Yy-CNwqDgNi5jQwzw/exec"; //
+const API_URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbz6veJ_02mh-L1-LmzJTfQpFgUBHKKg3MN__4OQ_NHleaaS2gFz_Yy-CNwqDgNi5jQwzw/exec"; 
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRLBHYrwNyk20UoDwqBu-zfDXWSyeRtsg536axelI0eEHYsovoMiwgoS82tjGRy6Tysw3Pj6ovDiyzo/pub?gid=1908899796&single=true&output=csv';
-const BASE_URL_LOCAL = "http://localhost:3000"; // Puerto común para servidores locales
 
-const ORDEN_VISUAL = ["1ª Hora", "2ª Hora", "3ª Hora", "Recreo", "4ª Hora", "5ª Hora", "6ª Hora"]; //
+// Puertos separados para evitar conflictos si enciendes ambos servidores
+const URL_MONGO = "http://localhost:3000"; // Servidor Los Moteros
+const URL_MYSQL = "http://localhost:3001"; // Servidor Jotasones
 
-// Inicialización de Socket.io para tiempo real (Grupo Los Moteros)
-// Nota: Requiere haber incluido <script src="/socket.io/socket.io.js"></script> en el HTML
-const socket = typeof io !== 'undefined' ? io(BASE_URL_LOCAL) : null;
+const ORDEN_VISUAL = ["1ª Hora", "2ª Hora", "3ª Hora", "Recreo", "4ª Hora", "5ª Hora", "6ª Hora"];
+
+// Inicialización de Socket.io (Solo para Mongo/Tiempo Real)
+const socket = typeof io !== 'undefined' ? io(URL_MONGO) : null;
 
 if (socket) {
-    socket.on("connect", () => console.log("🟢 Conectado al servidor de tiempo real"));
+    socket.on("connect", () => console.log("🟢 Conectado al servidor de tiempo real (Mongo)"));
     socket.on("datos-actualizados", () => {
         console.log("⚡ Cambio detectado en BD. Recargando...");
-        fetchMongo(); // Recarga automáticamente si estamos en modo Mongo
+        // Solo recargamos si el usuario está viendo la vista de Mongo en ese momento
+        // (Opcional: podrías comprobar una bandera, por ahora recarga simple)
+        const btnMongoActive = document.activeElement && document.activeElement.innerText.includes("MongoDB");
+        if(btnMongoActive) fetchMongo(); 
     });
 }
 
@@ -107,37 +112,51 @@ async function fetchCSV() {
 // --- C. MYSQL (JOTASONES) ---
 async function fetchMySQL() {
     const tbody = document.getElementById("tbody");
-    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">🐬 Consultando MySQL Local...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">🐬 Consultando MySQL Local (Puerto 3001)...</td></tr>';
     
     const fecha = new Date().toISOString().split('T')[0];
     try {
-        const res = await fetch(`${BASE_URL_LOCAL}/api/panel?fecha=${fecha}`);
+        // CORREGIDO: Usamos URL_MYSQL (Puerto 3001)
+        const res = await fetch(`${URL_MYSQL}/api/panel?fecha=${fecha}`);
         const data = await res.json();
         
         let agenda = {};
-        data.guardias.forEach(g => {
-            const h = `${g.hora}ª Hora`;
-            if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
-            agenda[h].guardias.push(g.profesor);
-        });
-        data.ausencias.forEach(a => {
-            const h = `${a.hora}ª Hora`;
-            if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
-            agenda[h].faltas.push({ profe: a.profesor, aula: a.aula });
-        });
+        
+        // Procesamos Guardias
+        if (data.guardias) {
+            data.guardias.forEach(g => {
+                const h = `${g.hora}ª Hora`;
+                if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
+                agenda[h].guardias.push(g.profesor);
+            });
+        }
+
+        // Procesamos Ausencias
+        if (data.ausencias) {
+            data.ausencias.forEach(a => {
+                const h = `${a.hora}ª Hora`;
+                if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
+                agenda[h].faltas.push({ profe: a.profesor, aula: a.aula });
+            });
+        }
+
         renderizarTablaDesdeObjeto(agenda);
-    } catch (e) { errorTabla("¿Está encendido el servidor MySQL (Jotasones)?"); }
+    } catch (e) { 
+        console.error(e);
+        errorTabla("Error conectando a MySQL (Jotasones) en puerto 3001."); 
+    }
 }
 
 // --- D. MONGODB / REAL TIME (LOS MOTEROS) ---
 async function fetchMongo() {
     const tbody = document.getElementById("tbody");
     const dia = document.getElementById("selDia").value;
-    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">🍃 Consultando MongoDB...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">🍃 Consultando MongoDB (Puerto 3000)...</td></tr>';
 
     try {
         const fecha = new Date().toISOString().split('T')[0];
-        const res = await fetch(`${BASE_URL_LOCAL}/api/panel?diaSemana=${dia}&fecha=${fecha}`); //
+        // CORREGIDO: Usamos URL_MONGO (Puerto 3000)
+        const res = await fetch(`${URL_MONGO}/api/panel?diaSemana=${dia}&fecha=${fecha}`);
         const data = await res.json();
         
         let agenda = {};
@@ -146,15 +165,18 @@ async function fetchMongo() {
         data.guardias.forEach(g => {
             const h = formatH(g.hora);
             if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
-            agenda[h].guardias.push(`${g.profesor.nombre} ${g.profesor.apellidos}`); //
+            // Mongo devuelve un objeto profesor, lo concatenamos
+            agenda[h].guardias.push(`${g.profesor.nombre} ${g.profesor.apellidos}`);
         });
+        
         data.ausencias.forEach(a => {
             const h = formatH(a.hora);
             if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
-            agenda[h].faltas.push({ profe: `${a.profesor.nombre} ${a.profesor.apellidos}`, aula: a.grupo }); //
+            agenda[h].faltas.push({ profe: `${a.profesor.nombre} ${a.profesor.apellidos}`, aula: a.grupo });
         });
+
         renderizarTablaDesdeObjeto(agenda);
-    } catch (e) { errorTabla("¿Está encendido el servidor Mongo (Los Moteros)?"); }
+    } catch (e) { errorTabla("¿Está encendido el servidor Mongo (Los Moteros) en puerto 3000?"); }
 }
 
 // ==========================================
