@@ -9,8 +9,8 @@ app.use(express.static(__dirname));
 
 const db = mysql.createConnection({
     host: 'localhost',
-    user: 'rootG',
-    password: 'root2025G',
+    user: 'root',
+    password: 'root_password',
     database: 'guardias'
 });
 

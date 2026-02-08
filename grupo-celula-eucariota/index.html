@@ -7,9 +7,15 @@
     <div class="control-panel">
       <label>📅 Selecciona Día:</label>
       <select id="selDia" onchange="cargarDatos()"></select>
-      <span id="latencyStats" class="latency-display" style="display: none"
-        >⏱️ -- ms</span
-      >
+      
+      <div class="button-group">
+        <button onclick="fetchEucariota()" class="btn-fetch">Fetch Eucariota</button>
+        <button onclick="fetchJotasones()" class="btn-fetch">Fetch Jotasones</button>
+        <button onclick="fetchMoteros()" class="btn-fetch">Fetch Moteros</button>
+        <button onclick="fetchDuostream()" class="btn-fetch">Fetch Duostream</button>
+      </div>
+
+      <span id="latencyStats" class="latency-display" style="display: none">⏱️ -- ms</span>
     </div>
 
     <table id="mainTable">
@@ -21,10 +27,7 @@
       </thead>
       <tbody id="tbody">
         <tr>
-          <td
-            colspan="2"
-            style="text-align: center; padding: 40px; color: #888"
-          >
+          <td colspan="2" style="text-align: center; padding: 40px; color: #888">
             Iniciando sistema...
           </td>
         </tr>

@@ -16,6 +16,7 @@ window.onload = function () {
   cargarDatos();
 };
 
+// --- FUNCIONES ORIGINALES ---
 function cargarDatos() {
   const dia = document.getElementById("selDia").value;
   const tbody = document.getElementById("tbody");
@@ -134,4 +135,53 @@ function generarDias() {
     if (i + 1 === hoyIdx || (hoyIdx === 0 && i === 0)) opt.selected = true;
     select.add(opt);
   });
+}
+
+// --- NUEVAS FUNCIONES DE INTEGRACIÓN ---
+
+// 1. Fetch Propio (Célula Eucariota)
+function fetchEucariota() {
+  console.log("Ejecutando fetch original...");
+  cargarDatos();
+}
+
+// 2. Fetch Jotasones (Requiere node server.js en puerto 3000)
+async function fetchJotasones() {
+  const fechaStr = new Date().toISOString().split('T')[0];
+  try {
+    const res = await fetch(`http://localhost:3000/api/panel?fecha=${fechaStr}`);
+    const data = await res.json();
+    console.log("Datos Jotasones:", data);
+    alert(`Fetch Jotasones: Recibidos ${data.length} registros desde MySQL.`);
+  } catch (e) {
+    alert("Error Jotasones: ¿Está el servidor activo en el puerto 3000?");
+  }
+}
+
+// 3. Fetch Los Moteros (Requiere node server.js en puerto 3000)
+async function fetchMoteros() {
+  const diaStr = document.getElementById("selDia").value;
+  const fechaStr = new Date().toISOString().split('T')[0];
+  try {
+    const res = await fetch(`http://localhost:3001/api/panel?diaSemana=${diaStr}&fecha=${fechaStr}`);
+    const data = await res.json();
+    console.log("Datos Moteros:", data);
+    alert(`Fetch Moteros: Recibidas ${data.ausencias.length} ausencias desde MongoDB.`);
+  } catch (e) {
+    alert("Error Moteros: ¿Está el servidor activo en el puerto 3000?");
+  }
+}
+
+// 4. Fetch Duostream (CSV público de Google Sheets)
+async function fetchDuostream() {
+  const urlCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRLBHYrwNyk20UoDwqBu-zfDXWSyeRtsg536axelI0eEHYsovoMiwgoS82tjGRy6Tysw3Pj6ovDiyzo/pub?gid=1908899796&single=true&output=csv';
+  try {
+    const res = await fetch(urlCSV);
+    const texto = await res.text();
+    console.log("CSV Duostream:", texto);
+    const filas = texto.split('\n').length - 1;
+    alert(`Fetch Duostream: Recibido CSV con ${filas} líneas de datos.`);
+  } catch (e) {
+    alert("Error Duostream: No se pudo acceder al CSV de Google Sheets.");
+  }
 }
