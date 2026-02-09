@@ -4,7 +4,7 @@ const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
 const os = require("os");
-const path = require("path"); // <--- AÑADIDO: Necesario para las rutas de carpetas
+const path = require("path"); 
 require("dotenv").config();
 
 const app = express();
@@ -20,19 +20,12 @@ const io = new Server(server, {
 
 app.use(express.json());
 
-// ---------------------------------------------------------
-// --- PARTE AÑADIDA: SERVIR ARCHIVOS ESTÁTICOS (HTML) ---
-// ---------------------------------------------------------
-
-// 1. Decimos que la carpeta "public" tiene la web
+// 1. Servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 2. Si entran a la raíz, enviamos el index.html
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-// ---------------------------------------------------------
 
 // --- 1. MODELOS ---
 
@@ -68,17 +61,7 @@ const Aula = mongoose.model("Aula", aulaSchema);
 const Horario = mongoose.model("Horario", horarioSchema);
 const Ausencia = mongoose.model("Ausencia", ausenciaSchema);
 
-// --- 2. CONEXIÓN Y LOGS ---
-
-app.use((req, res, next) => {
-    const start = process.hrtime();
-    res.on('finish', () => {
-        const diff = process.hrtime(start);
-        const timeMs = (diff[0] * 1e9 + diff[1]) / 1e6;
-        console.log(`📡 [${req.method}] ${req.originalUrl} - Procesado en: ${timeMs.toFixed(3)} ms`);
-    });
-    next();
-});
+// --- 2. CONEXIÓN ---
 
 mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/guardiasDB")
   .then(() => {
@@ -95,21 +78,7 @@ mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/guardiasDB"
   })
   .catch(err => console.error(err));
 
-let connectedUsers = 0;
-
-io.on("connection", (socket) => {
-  connectedUsers++;
-  console.log("👤 Cliente conectado. Total:", connectedUsers);
-  io.emit("usuarios-conectados", connectedUsers);
-
-  socket.on("disconnect", () => {
-    connectedUsers--;
-    console.log("👤 Cliente desconectado. Total:", connectedUsers);
-    io.emit("usuarios-conectados", connectedUsers);
-  });
-});
-
-// --- 3. SEED DE DATOS ---
+// --- 3. SEED DE DATOS (ACTUALIZADO CON AUSENCIAS) ---
 async function inicializarDatos() {
   try {
     const cuenta = await Profesor.countDocuments();
@@ -151,6 +120,29 @@ async function inicializarDatos() {
         c++;
       }
     }
+
+    // --- GENERACIÓN DE AUSENCIAS (Hoy, Mañana y Pasado Mañana) ---
+    const hoy = new Date();
+    const fechasPrueba = [];
+    
+    for(let i = 0; i < 3; i++) {
+      const d = new Date();
+      d.setDate(hoy.getDate() + i);
+      fechasPrueba.push(d.toISOString().split("T")[0]);
+    }
+
+    console.log("📅 Creando ausencias para:", fechasPrueba);
+
+    for (const f of fechasPrueba) {
+      await new Ausencia({
+        profesor: profesDB[Math.floor(Math.random() * profesDB.length)]._id,
+        fecha: f,
+        hora: "1º",
+        tarea: `Tarea de prueba para el día ${f}`,
+        grupo: "Grupo Test"
+      }).save();
+    }
+
     console.log("🚀 Datos iniciales cargados correctamente.");
   } catch (error) { console.error("Error seed:", error); }
 }
@@ -201,9 +193,12 @@ app.get("/api/profesores", async (req, res) => {
 });
 
 app.get("/api/reset", async (req, res) => {
-    await Profesor.deleteMany({}); await Aula.deleteMany({}); await Horario.deleteMany({}); await Ausencia.deleteMany({});
+    await Profesor.deleteMany({}); 
+    await Aula.deleteMany({}); 
+    await Horario.deleteMany({}); 
+    await Ausencia.deleteMany({});
     await inicializarDatos();
-    res.json({ msg: "Reset completo" });
+    res.json({ msg: "Reset completo y datos generados" });
 });
 
 // --- 5. START SERVER ---

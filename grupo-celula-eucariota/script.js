@@ -13,7 +13,6 @@ const ORDEN_VISUAL = [
 
 window.onload = function () {
   generarDias();
-  cargarDatos();
 };
 
 // --- FUNCIONES ORIGINALES (EUCARIOTA) ---
@@ -208,11 +207,9 @@ async function fetchMoteros() {
   const diaStr = document.getElementById("selDia").value;
   const fechaStr = new Date().toISOString().split("T")[0];
 
-  // 1. Iniciar carga
   tbody.innerHTML =
-    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando base de datos (Moteros)...</td></tr>';
+    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando Moteros...</td></tr>';
   const startTime = performance.now();
-  latencyBox.style.display = "none";
 
   try {
     const res = await fetch(
@@ -220,22 +217,34 @@ async function fetchMoteros() {
     );
     const data = await res.json();
 
-    // 2. Finalizar cronómetro
     const endTime = performance.now();
-    const duration = (endTime - startTime).toFixed(0);
-    latencyBox.innerText = `⏱️ Tiempo de carga: ${duration} ms`;
+    latencyBox.innerText = `⏱️ Tiempo de carga: ${(endTime - startTime).toFixed(0)} ms`;
     latencyBox.style.display = "inline-block";
 
-    const formateados = data.ausencias.map((d) => ({
-      hora: d.hora,
-      responsable: "Ver en App Moteros",
-      sujeto: `${d.profesor.nombre} ${d.profesor.apellidos}`,
-      lugar: d.grupo,
-      nota: d.tarea,
-    }));
+    // Mapeamos las ausencias buscando al responsable de guardia
+    const formateados = data.ausencias.map((ausencia) => {
+      // Buscamos profesores de guardia en la misma hora que estén 'disponibles'
+      const guardiasEnEsaHora = data.guardias
+        .filter((g) => g.hora === ausencia.hora && g.status === "disponible")
+        .map((g) => `${g.profesor.nombre} ${g.profesor.apellidos}`);
+
+      return {
+        hora: ausencia.hora,
+        // Si hay guardias, ponemos sus nombres; si no, avisamos
+        responsable:
+          guardiasEnEsaHora.length > 0
+            ? guardiasEnEsaHora.join(", ")
+            : "⚠️ Sin guardia asignado",
+        sujeto: `${ausencia.profesor.nombre} ${ausencia.profesor.apellidos}`,
+        lugar: ausencia.grupo,
+        nota: ausencia.tarea,
+      };
+    });
+
     renderizarTablaExterna(formateados, "Moteros");
   } catch (e) {
-    alert("Error Moteros (Puerto 3001)");
+    console.error(e);
+    alert("Error conectando con el servidor de Moteros (Puerto 3001)");
     tbody.innerHTML = "";
   }
 }
