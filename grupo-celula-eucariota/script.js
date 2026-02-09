@@ -15,83 +15,6 @@ window.onload = function () {
   generarDias();
 };
 
-// --- FUNCIONES ORIGINALES (EUCARIOTA) ---
-function cargarDatos() {
-  const dia = document.getElementById("selDia").value;
-  const tbody = document.getElementById("tbody");
-  const latencyBox = document.getElementById("latencyStats");
-
-  tbody.innerHTML =
-    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando base de datos...</td></tr>';
-
-  const startTime = performance.now();
-  latencyBox.style.display = "none";
-
-  fetch(API_URL + "?dia=" + dia)
-    .then((r) => r.json())
-    .then((data) => {
-      const endTime = performance.now();
-      const duration = (endTime - startTime).toFixed(0);
-      latencyBox.innerText = `⏱️ Tiempo de carga: ${duration} ms`;
-      latencyBox.style.display = "inline-block";
-      tbody.innerHTML = "";
-
-      if (data.status === "error") {
-        tbody.innerHTML = `<tr><td colspan="2" style="color:red; text-align:center; padding:20px;">Error: ${data.message}</td></tr>`;
-        return;
-      }
-
-      let agenda = {};
-      const initHora = (h) => {
-        if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
-      };
-
-      data.guardias.forEach((item) => {
-        initHora(item.hora);
-        agenda[item.hora].guardias = item.profesores;
-      });
-
-      data.faltas.forEach((item) => {
-        initHora(item.hora);
-        agenda[item.hora].faltas.push({
-          profe: item.profesor,
-          aula: item.aula,
-        });
-      });
-
-      let horasPresentes = Object.keys(agenda).sort(
-        (a, b) => ORDEN_VISUAL.indexOf(a) - ORDEN_VISUAL.indexOf(b),
-      );
-
-      if (horasPresentes.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:40px; color:#137333; font-weight:bold;">Agenda libre para el ${dia}.</td></tr>`;
-        return;
-      }
-
-      horasPresentes.forEach((hora) => {
-        let info = agenda[hora];
-        let tr = document.createElement("tr");
-        let htmlGuardias =
-          info.guardias.length > 0
-            ? `<ul class="guard-list">${info.guardias.map((p) => `<li>${p}</li>`).join("")}</ul>`
-            : '<span class="no-guards">⚠️ ALERTA: NADIE DISPONIBLE</span>';
-
-        let htmlFaltas =
-          info.faltas.length > 0
-            ? info.faltas
-                .map(
-                  (f) =>
-                    `<div class="falta-card"><span class="falta-profe">${f.profe}</span><span class="falta-aula">${f.aula}</span></div>`,
-                )
-                .join("")
-            : '<span class="sin-faltas">Sin incidencias</span>';
-
-        tr.innerHTML = `<td width="40%"><span class="periodo-display">${hora}</span>${htmlGuardias}</td><td width="60%">${htmlFaltas}</td>`;
-        tbody.appendChild(tr);
-      });
-    });
-}
-
 function generarDias() {
   const select = document.getElementById("selDia");
   const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
@@ -104,7 +27,6 @@ function generarDias() {
   });
 }
 
-// --- NUEVA FUNCIÓN GENÉRICA PARA PINTAR DATOS EXTERNOS ---
 function renderizarTablaExterna(datosOriginales) {
   const tbody = document.getElementById("tbody");
   tbody.innerHTML = "";
@@ -194,7 +116,79 @@ function obtenerFechaDeSemana(nombreDia) {
 // --- INTEGRACIONES ---
 
 function fetchEucariota() {
-  cargarDatos();
+  const dia = document.getElementById("selDia").value;
+  const tbody = document.getElementById("tbody");
+  const latencyBox = document.getElementById("latencyStats");
+
+  tbody.innerHTML =
+    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando base de datos...</td></tr>';
+
+  const startTime = performance.now();
+  latencyBox.style.display = "none";
+
+  fetch(API_URL + "?dia=" + dia)
+    .then((r) => r.json())
+    .then((data) => {
+      const endTime = performance.now();
+      const duration = (endTime - startTime).toFixed(0);
+      latencyBox.innerText = `⏱️ Tiempo de carga: ${duration} ms`;
+      latencyBox.style.display = "inline-block";
+      tbody.innerHTML = "";
+
+      if (data.status === "error") {
+        tbody.innerHTML = `<tr><td colspan="2" style="color:red; text-align:center; padding:20px;">Error: ${data.message}</td></tr>`;
+        return;
+      }
+
+      let agenda = {};
+      const initHora = (h) => {
+        if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
+      };
+
+      data.guardias.forEach((item) => {
+        initHora(item.hora);
+        agenda[item.hora].guardias = item.profesores;
+      });
+
+      data.faltas.forEach((item) => {
+        initHora(item.hora);
+        agenda[item.hora].faltas.push({
+          profe: item.profesor,
+          aula: item.aula,
+        });
+      });
+
+      let horasPresentes = Object.keys(agenda).sort(
+        (a, b) => ORDEN_VISUAL.indexOf(a) - ORDEN_VISUAL.indexOf(b),
+      );
+
+      if (horasPresentes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:40px; color:#137333; font-weight:bold;">Agenda libre para el ${dia}.</td></tr>`;
+        return;
+      }
+
+      horasPresentes.forEach((hora) => {
+        let info = agenda[hora];
+        let tr = document.createElement("tr");
+        let htmlGuardias =
+          info.guardias.length > 0
+            ? `<ul class="guard-list">${info.guardias.map((p) => `<li>${p}</li>`).join("")}</ul>`
+            : '<span class="no-guards">⚠️ ALERTA: NADIE DISPONIBLE</span>';
+
+        let htmlFaltas =
+          info.faltas.length > 0
+            ? info.faltas
+                .map(
+                  (f) =>
+                    `<div class="falta-card"><span class="falta-profe">${f.profe}</span><span class="falta-aula">${f.aula}</span></div>`,
+                )
+                .join("")
+            : '<span class="sin-faltas">Sin incidencias</span>';
+
+        tr.innerHTML = `<td width="40%"><span class="periodo-display">${hora}</span>${htmlGuardias}</td><td width="60%">${htmlFaltas}</td>`;
+        tbody.appendChild(tr);
+      });
+    });
 }
 
 async function fetchJotasones() {
