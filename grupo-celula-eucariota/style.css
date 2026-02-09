@@ -1,179 +1,194 @@
+/* --- VARIABLES MODO OSCURO --- */
+:root {
+  --bg-color: #0f172a;
+  --card-bg: #1e293b;
+  --primary: #818cf8;
+  --primary-hover: #a5b4fc;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --success: #34d399;
+  --error: #fb7185;
+  --radius: 12px;
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+}
+
 body {
-  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  padding: 20px;
-  background-color: white;
-  color: #333;
+  font-family:
+    "Inter",
+    -apple-system,
+    sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  margin: 0;
+  padding: 40px 20px;
 }
 
-/* --- BARRA DE CONTROL --- */
+/* --- PANEL DE CONTROL (HEADER) --- */
 .control-panel {
-  background: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 25px;
+  max-width: 1100px;
+  margin: 0 auto 30px auto;
+  background: var(--card-bg);
+  padding: 12px 20px; /* Reducido el padding para que sea más fino */
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+
+  /* Alineación en una sola línea */
   display: flex;
-  gap: 15px;
+  flex-direction: row;
   align-items: center;
-  border: 1px solid #e0e0e0;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  flex-wrap: nowrap; /* Prohíbe el salto de línea */
+  gap: 15px;
+  overflow-x: auto; /* Si la pantalla es muy pequeña, permite scroll horizontal en el header */
 }
 
-/* Nuevos estilos para botones */
-.button-group {
+/* Grupo del selector (Día + Dropdown) */
+.selector-group {
   display: flex;
-  gap: 10px;
-  margin-left: auto;
+  align-items: center;
+  gap: 8px; /* Espacio muy pequeño entre texto y selector */
+  white-space: nowrap;
 }
 
-.btn-fetch {
-  padding: 10px 15px;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-  background-color: #ffffff;
+label {
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #555;
-}
-
-.btn-fetch:hover {
-  background-color: #1a73e8;
-  color: white;
-  border-color: #1a73e8;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 select {
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  font-size: 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #0f172a;
+  color: white;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+/* Grupo de botones */
+.button-group {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0; /* Evita que los botones se encojan */
+}
+
+.btn-fetch {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.8rem;
   cursor: pointer;
-  flex-grow: 1;
-  max-width: 200px;
-  background: white;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
-/* ESTILO PARA EL TIEMPO DE EJECUCIÓN */
+.btn-fetch:hover {
+  background: var(--primary);
+  color: #0f172a;
+}
+
+/* Latencia */
 .latency-display {
-  font-size: 13px;
-  color: #666;
+  font-size: 0.7rem;
   font-family: monospace;
-  background: #e9ecef;
+  color: var(--primary);
+  background: rgba(129, 140, 248, 0.1);
   padding: 5px 10px;
-  border-radius: 4px;
-  border: 1px solid #dee2e6;
+  border-radius: 15px;
+  border: 1px solid rgba(129, 140, 248, 0.2);
+  white-space: nowrap;
 }
 
-/* --- TABLA UNIFICADA --- */
+/* --- TABLA --- */
 table {
   width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
   border-collapse: separate;
-  border-spacing: 0;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  border-spacing: 0 12px;
 }
 
 th {
-  padding: 18px;
   text-align: left;
-  font-size: 15px;
+  padding: 0 20px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: white;
-}
-th.col-izq {
-  background-color: #2c3e50;
-  width: 40%;
-}
-th.col-der {
-  background-color: #c0392b;
-  width: 60%;
 }
 
 td {
-  vertical-align: top;
+  background: var(--card-bg);
   padding: 20px;
-  border-bottom: 1px solid #eee;
-}
-tr:last-child td {
-  border-bottom: none;
-}
-tr:nth-child(even) {
-  background-color: #f8f9fa;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 
-/* --- ESTILOS INTERNOS --- */
-.periodo-display {
-  font-size: 22px;
-  font-weight: 800;
-  color: #1a73e8;
-  margin-bottom: 10px;
-  display: block;
-  border-bottom: 2px solid #e1e9f2;
-  padding-bottom: 5px;
+td:first-child {
+  border-left: 1px solid var(--border);
+  border-top-left-radius: var(--radius);
+  border-bottom-left-radius: var(--radius);
 }
+
+td:last-child {
+  border-right: 1px solid var(--border);
+  border-top-right-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+}
+
+.periodo-display {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 8px;
+  display: block;
+}
+
 .guard-list {
   margin: 0;
-  padding-left: 0;
+  padding: 0;
   list-style: none;
 }
 .guard-list li {
-  margin-bottom: 6px;
-  padding-left: 24px;
-  position: relative;
-  font-size: 15px;
-  color: #444;
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  padding: 2px 0;
 }
 .guard-list li::before {
-  content: "✅";
-  position: absolute;
-  left: 0;
-  top: 1px;
-}
-
-.no-guards {
-  color: #d93025;
-  font-weight: bold;
-  background: #fce8e6;
-  padding: 8px 12px;
-  border-radius: 4px;
-  display: block;
-  text-align: center;
-  font-size: 13px;
+  content: "•";
+  color: var(--primary);
+  margin-right: 8px;
 }
 
 .falta-card {
-  background: #fff;
-  border-left: 5px solid #d93025;
-  padding: 12px 15px;
-  margin-bottom: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-radius: 0 4px 4px 0;
-  border: 1px solid #eee;
-  border-left-width: 5px;
+  background: rgba(15, 23, 42, 0.4);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border-left: 3px solid var(--error);
 }
+
 .falta-profe {
-  font-weight: bold;
-  font-size: 16px;
-  color: #222;
-  margin-bottom: 4px;
+  font-weight: 700;
+  color: white;
   display: block;
 }
 .falta-aula {
-  color: #666;
-  font-size: 14px;
-  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .sin-faltas {
-  color: #137333;
-  font-weight: 500;
-  background: #e6f4ea;
-  padding: 12px;
-  border-radius: 4px;
-  display: block;
-  text-align: center;
-  border: 1px solid #c3e6cb;
+  color: var(--success);
+  font-size: 0.8rem;
+  background: rgba(52, 211, 153, 0.1);
+  padding: 4px 12px;
+  border-radius: 15px;
 }

@@ -3,11 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div class="control-panel">
-      <label>📅 Selecciona Día:</label>
-      <select id="selDia"></select>
+      <div class="selector-group">
+        <label>📅 Selecciona Día:</label>
+        <select id="selDia"></select>
+        <span
+          id="latencyStats"
+          class="latency-display"
+          style="display: none"
+        ></span>
+      </div>
 
       <div class="button-group">
         <button onclick="fetchEucariota()" class="btn-fetch">
@@ -17,12 +28,6 @@
         <button onclick="fetchMoteros()" class="btn-fetch">Moteros</button>
         <button onclick="fetchDuostream()" class="btn-fetch">Duostream</button>
       </div>
-
-      <span
-        id="latencyStats"
-        class="latency-display"
-        style="display: none"
-      ></span>
     </div>
 
     <table id="mainTable">
