@@ -33,7 +33,7 @@ function cargarDatos() {
     .then((data) => {
       const endTime = performance.now();
       const duration = (endTime - startTime).toFixed(0);
-      latencyBox.innerText = `⏱️ Ping: ${duration} ms`;
+      latencyBox.innerText = `⏱️ Tiempo de carga: ${duration} ms`;
       latencyBox.style.display = "inline-block";
       tbody.innerHTML = "";
 
@@ -142,12 +142,28 @@ function fetchEucariota() {
 }
 
 async function fetchJotasones() {
+  const tbody = document.getElementById("tbody");
+  const latencyBox = document.getElementById("latencyStats");
+
+  // 1. Mostrar mensaje de carga y resetear cronómetro
+  tbody.innerHTML =
+    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando base de datos (Jotasones)...</td></tr>';
+  const startTime = performance.now();
+  latencyBox.style.display = "none";
+
   const fechaStr = new Date().toISOString().split("T")[0];
   try {
     const res = await fetch(
       `http://localhost:3000/api/panel?fecha=${fechaStr}`,
     );
     const data = await res.json();
+
+    // 2. Calcular tiempo y mostrarlo
+    const endTime = performance.now();
+    const duration = (endTime - startTime).toFixed(0);
+    latencyBox.innerText = `⏱️ Tiempo de carga: ${duration} ms`;
+    latencyBox.style.display = "inline-block";
+
     const formateados = data.map((d) => ({
       hora: d.hora_inicio + "ª Hora",
       responsable: d.nombre_guardia,
@@ -158,49 +174,75 @@ async function fetchJotasones() {
     renderizarTablaExterna(formateados, "Jotasones");
   } catch (e) {
     alert("Error Jotasones (Puerto 3000)");
+    tbody.innerHTML = "";
   }
 }
 
 async function fetchMoteros() {
+  const tbody = document.getElementById("tbody");
+  const latencyBox = document.getElementById("latencyStats");
   const diaStr = document.getElementById("selDia").value;
-  // Obtenemos la fecha de hoy en formato YYYY-MM-DD
   const fechaStr = new Date().toISOString().split("T")[0];
 
+  // 1. Iniciar carga
+  tbody.innerHTML =
+    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando base de datos (Moteros)...</td></tr>';
+  const startTime = performance.now();
+  latencyBox.style.display = "none";
+
   try {
-    // Añadimos &fecha= a la URL
     const res = await fetch(
       `http://localhost:3001/api/panel?diaSemana=${diaStr}&fecha=${fechaStr}`,
     );
     const data = await res.json();
 
-    // Corregimos el mapeo de nombres de campos (Moteros usa 'grupo' y 'tarea')
+    // 2. Finalizar cronómetro
+    const endTime = performance.now();
+    const duration = (endTime - startTime).toFixed(0);
+    latencyBox.innerText = `⏱️ Tiempo de carga: ${duration} ms`;
+    latencyBox.style.display = "inline-block";
+
     const formateados = data.ausencias.map((d) => ({
       hora: d.hora,
       responsable: "Ver en App Moteros",
       sujeto: `${d.profesor.nombre} ${d.profesor.apellidos}`,
-      lugar: d.grupo, // En Moteros es 'grupo', no 'aula'
-      nota: d.tarea, // En Moteros es 'tarea', no 'observaciones'
+      lugar: d.grupo,
+      nota: d.tarea,
     }));
     renderizarTablaExterna(formateados, "Moteros");
   } catch (e) {
-    alert("Error Moteros (Puerto 3001). ¿Has arrancado su servidor?");
+    alert("Error Moteros (Puerto 3001)");
+    tbody.innerHTML = "";
   }
 }
 
 async function fetchDuostream() {
+  const tbody = document.getElementById("tbody");
+  const latencyBox = document.getElementById("latencyStats");
   const urlCSV =
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vRLBHYrwNyk20UoDwqBu-zfDXWSyeRtsg536axelI0eEHYsovoMiwgoS82tjGRy6Tysw3Pj6ovDiyzo/pub?gid=1908899796&single=true&output=csv";
   const diaSeleccionado = document.getElementById("selDia").value;
 
+  // 1. Iniciar carga
+  tbody.innerHTML =
+    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando base de datos (Duostream CSV)...</td></tr>';
+  const startTime = performance.now();
+  latencyBox.style.display = "none";
+
   try {
     const res = await fetch(urlCSV);
     const texto = await res.text();
-    const lineas = texto.split("\n").slice(1);
 
+    // 2. Finalizar cronómetro
+    const endTime = performance.now();
+    const duration = (endTime - startTime).toFixed(0);
+    latencyBox.innerText = `⏱️ Tiempo de carga: ${duration} ms`;
+    latencyBox.style.display = "inline-block";
+
+    const lineas = texto.split("\n").slice(1);
     const formateados = lineas
       .map((linea) => {
         const c = linea.split(",");
-        // Estructura: Dia[0], Orden[1], Rango[2], Tipo[3], Profesor[4], Ubicacion[5], Tarea[6]
         return {
           dia: c[0]?.trim(),
           hora: (c[1] ? c[1] + "ª Hora" : "") + (c[2] ? " (" + c[2] + ")" : ""),
@@ -210,10 +252,11 @@ async function fetchDuostream() {
           nota: c[6],
         };
       })
-      .filter((f) => f.dia === diaSeleccionado); // Solo mostramos los del día seleccionado en el desplegable
+      .filter((f) => f.dia === diaSeleccionado);
 
     renderizarTablaExterna(formateados, "Duostream");
   } catch (e) {
     alert("Error al leer CSV de Duostream");
+    tbody.innerHTML = "";
   }
 }
