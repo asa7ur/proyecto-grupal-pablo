@@ -135,6 +135,27 @@ function renderizarTablaExterna(filas, titulo) {
   });
 }
 
+function obtenerFechaDeSemana(nombreDia) {
+  const dias = [
+    "Domingo",
+    "Lunes",
+    "Martes",
+    "Miércoles",
+    "Jueves",
+    "Viernes",
+    "Sábado",
+  ];
+  const hoy = new Date();
+  const indiceDeseado = dias.indexOf(nombreDia);
+  const fecha = new Date(hoy);
+
+  // Ajustamos la fecha al día de la semana seleccionado
+  const diferencia = indiceDeseado - hoy.getDay();
+  fecha.setDate(hoy.getDate() + diferencia);
+
+  return fecha.toISOString().split("T")[0];
+}
+
 // --- INTEGRACIONES ---
 
 function fetchEucariota() {
@@ -144,14 +165,17 @@ function fetchEucariota() {
 async function fetchJotasones() {
   const tbody = document.getElementById("tbody");
   const latencyBox = document.getElementById("latencyStats");
+  const diaSeleccionado = document.getElementById("selDia").value;
+  const fechaStr = obtenerFechaDeSemana(diaSeleccionado);
 
   // 1. Mostrar mensaje de carga y resetear cronómetro
   tbody.innerHTML =
-    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando base de datos (Jotasones)...</td></tr>';
+    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando Jotasones para el día ' +
+    fechaStr +
+    "...</td></tr>";
   const startTime = performance.now();
   latencyBox.style.display = "none";
 
-  const fechaStr = new Date().toISOString().split("T")[0];
   try {
     const res = await fetch(
       `http://localhost:3000/api/panel?fecha=${fechaStr}`,
