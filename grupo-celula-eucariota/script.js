@@ -64,7 +64,7 @@ function cargarDatos() {
       );
 
       if (horasPresentes.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:40px; color:#137333; font-weight:bold;">✅ Agenda libre para el ${dia}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:40px; color:#137333; font-weight:bold;">Agenda libre para el ${dia}.</td></tr>`;
         return;
       }
 
@@ -81,10 +81,10 @@ function cargarDatos() {
             ? info.faltas
                 .map(
                   (f) =>
-                    `<div class="falta-card"><span class="falta-profe">👤 ${f.profe}</span><span class="falta-aula">📍 ${f.aula}</span></div>`,
+                    `<div class="falta-card"><span class="falta-profe">${f.profe}</span><span class="falta-aula">${f.aula}</span></div>`,
                 )
                 .join("")
-            : '<span class="sin-faltas">✅ Sin incidencias</span>';
+            : '<span class="sin-faltas">Sin incidencias</span>';
 
         tr.innerHTML = `<td width="40%"><span class="periodo-display">${hora}</span>${htmlGuardias}</td><td width="60%">${htmlFaltas}</td>`;
         tbody.appendChild(tr);
@@ -110,7 +110,7 @@ function renderizarTablaExterna(datosOriginales, titulo) {
   tbody.innerHTML = "";
 
   if (datosOriginales.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:40px; color:#137333; font-weight:bold;">✅ Sin incidencias en ${titulo}.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:40px; color:#137333; font-weight:bold;">Sin incidencias en ${titulo}.</td></tr>`;
     return;
   }
 
@@ -154,9 +154,9 @@ function renderizarTablaExterna(datosOriginales, titulo) {
       .map(
         (f) => `
         <div class="falta-card">
-          <span class="falta-profe">👤 ${f.profe}</span>
-          <span class="falta-aula">📍 ${f.aula}</span>
-          ${f.nota ? `<p style="font-size:12px; color:#666; margin-top:4px;">📝 ${f.nota}</p>` : ""}
+          <span class="falta-profe">${f.profe}</span>
+          <span class="falta-aula">${f.aula}</span>
+          ${f.nota ? `<p style="font-size:12px; color:#666; margin-top:4px;">${f.nota}</p>` : ""}
         </div>
       `,
       )
