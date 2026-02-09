@@ -105,30 +105,66 @@ function generarDias() {
 }
 
 // --- NUEVA FUNCIÓN GENÉRICA PARA PINTAR DATOS EXTERNOS ---
-function renderizarTablaExterna(filas, titulo) {
+function renderizarTablaExterna(datosOriginales, titulo) {
   const tbody = document.getElementById("tbody");
   tbody.innerHTML = "";
 
-  if (filas.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:20px;">No hay datos en ${titulo}</td></tr>`;
+  if (datosOriginales.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:40px; color:#137333; font-weight:bold;">✅ Sin incidencias en ${titulo}.</td></tr>`;
     return;
   }
 
-  filas.forEach((item) => {
+  // 1. Agrupar datos por hora
+  let agenda = {};
+  datosOriginales.forEach((item) => {
+    if (!agenda[item.hora]) {
+      agenda[item.hora] = { guardias: [], faltas: [] };
+    }
+    // Añadir responsable (guardia) si no está ya en la lista
+    if (
+      item.responsable &&
+      !agenda[item.hora].guardias.includes(item.responsable)
+    ) {
+      agenda[item.hora].guardias.push(item.responsable);
+    }
+    // Añadir la falta
+    agenda[item.hora].faltas.push({
+      profe: item.sujeto,
+      aula: item.lugar,
+      nota: item.nota,
+    });
+  });
+
+  // 2. Ordenar horas según el ORDEN_VISUAL
+  let horasOrdenadas = Object.keys(agenda).sort(
+    (a, b) => ORDEN_VISUAL.indexOf(a) - ORDEN_VISUAL.indexOf(b),
+  );
+
+  // 3. Pintar en la tabla
+  horasOrdenadas.forEach((hora) => {
+    let info = agenda[hora];
     let tr = document.createElement("tr");
+
+    let htmlGuardias =
+      info.guardias.length > 0
+        ? `<ul class="guard-list">${info.guardias.map((p) => `<li>${p}</li>`).join("")}</ul>`
+        : '<span class="no-guards">⚠️ ALERTA: NADIE DISPONIBLE</span>';
+
+    let htmlFaltas = info.faltas
+      .map(
+        (f) => `
+        <div class="falta-card">
+          <span class="falta-profe">👤 ${f.profe}</span>
+          <span class="falta-aula">📍 ${f.aula}</span>
+          ${f.nota ? `<p style="font-size:12px; color:#666; margin-top:4px;">📝 ${f.nota}</p>` : ""}
+        </div>
+      `,
+      )
+      .join("");
+
     tr.innerHTML = `
-      <td>
-          <span class="periodo-display">${item.hora}</span>
-          <div style="font-size:12px; font-weight:bold; color:#888;">Personal:</div>
-          <ul class="guard-list"><li>${item.responsable || "No asignado"}</li></ul>
-      </td>
-      <td>
-          <div class="falta-card">
-              <span class="falta-profe">👤 ${item.sujeto}</span>
-              <span class="falta-aula">📍 ${item.lugar}</span>
-              ${item.nota ? `<p style="font-size:13px; margin-top:5px; color:#555;">📝 ${item.nota}</p>` : ""}
-          </div>
-      </td>
+      <td width="40%"><span class="periodo-display">${hora}</span>${htmlGuardias}</td>
+      <td width="60%">${htmlFaltas}</td>
     `;
     tbody.appendChild(tr);
   });

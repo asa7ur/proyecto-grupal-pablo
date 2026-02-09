@@ -1,46 +1,40 @@
 <!doctype html>
 <html>
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" href="style.css" />
-    </head>
-    <body>
-        <div class="control-panel">
-            <label>📅 Selecciona Día:</label>
-            <select id="selDia" onchange="cargarDatos()"></select>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="control-panel">
+      <label>📅 Selecciona Día:</label>
+      <select id="selDia"></select>
 
-            <div class="button-group">
-                <button onclick="fetchEucariota()" class="btn-fetch">
-                    Célula Eucariota
-                </button>
-                <button onclick="fetchJotasones()" class="btn-fetch">
-                    Jotasones
-                </button>
-                <button onclick="fetchMoteros()" class="btn-fetch">
-                    Moteros
-                </button>
-                <button onclick="fetchDuostream()" class="btn-fetch">
-                    Duostream
-                </button>
-            </div>
+      <div class="button-group">
+        <button onclick="fetchEucariota()" class="btn-fetch">
+          Célula Eucariota
+        </button>
+        <button onclick="fetchJotasones()" class="btn-fetch">Jotasones</button>
+        <button onclick="fetchMoteros()" class="btn-fetch">Moteros</button>
+        <button onclick="fetchDuostream()" class="btn-fetch">Duostream</button>
+      </div>
 
-            <span
-                id="latencyStats"
-                class="latency-display"
-                style="display: none"
-            ></span>
-        </div>
+      <span
+        id="latencyStats"
+        class="latency-display"
+        style="display: none"
+      ></span>
+    </div>
 
-        <table id="mainTable">
-            <thead>
-                <tr>
-                    <th class="col-izq">Horario & Guardias</th>
-                    <th class="col-der">Ausencias / Tareas</th>
-                </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-        </table>
+    <table id="mainTable">
+      <thead>
+        <tr>
+          <th class="col-izq">Horario & Guardias</th>
+          <th class="col-der">Ausencias / Tareas</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
 
-        <script src="script.js"></script>
-    </body>
+    <script src="script.js"></script>
+  </body>
 </html>
