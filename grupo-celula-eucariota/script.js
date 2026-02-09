@@ -42,19 +42,21 @@ function renderizarTablaExterna(datosOriginales) {
     if (!agenda[item.hora]) {
       agenda[item.hora] = { guardias: [], faltas: [] };
     }
-    // Añadir responsable (guardia) si no está ya en la lista
+    // Añadir responsable (guardia) si existe y no está ya en la lista
     if (
       item.responsable &&
       !agenda[item.hora].guardias.includes(item.responsable)
     ) {
       agenda[item.hora].guardias.push(item.responsable);
     }
-    // Añadir la falta
-    agenda[item.hora].faltas.push({
-      profe: item.sujeto,
-      aula: item.lugar,
-      nota: item.nota,
-    });
+    // Añadir la falta SOLO si hay un sujeto (profesor que falta)
+    if (item.sujeto) {
+      agenda[item.hora].faltas.push({
+        profe: item.sujeto,
+        aula: item.lugar,
+        nota: item.nota,
+      });
+    }
   });
 
   // 2. Ordenar horas según el ORDEN_VISUAL
@@ -72,17 +74,19 @@ function renderizarTablaExterna(datosOriginales) {
         ? `<ul class="guard-list">${info.guardias.map((p) => `<li>${p}</li>`).join("")}</ul>`
         : '<span class="no-guards">⚠️ ALERTA: NADIE DISPONIBLE</span>';
 
-    let htmlFaltas = info.faltas
-      .map(
-        (f) => `
-        <div class="falta-card">
-          <span class="falta-profe">${f.profe}</span>
-          <span class="falta-aula">${f.aula}</span>
-          ${f.nota ? `<p style="font-size:12px; color:#666; margin-top:4px;">${f.nota}</p>` : ""}
-        </div>
-      `,
-      )
-      .join("");
+    let htmlFaltas = info.faltas.length > 0 
+      ? info.faltas
+          .map(
+            (f) => `
+            <div class="falta-card">
+              <span class="falta-profe">${f.profe}</span>
+              <span class="falta-aula">${f.aula || ''}</span>
+              ${f.nota ? `<p style="font-size:12px; color:#666; margin-top:4px;">${f.nota}</p>` : ""}
+            </div>
+          `,
+          )
+          .join("")
+      : '<span class="sin-faltas">Sin incidencias</span>';
 
     tr.innerHTML = `
       <td width="40%"><span class="periodo-display">${hora}</span>${htmlGuardias}</td>
@@ -93,23 +97,12 @@ function renderizarTablaExterna(datosOriginales) {
 }
 
 function obtenerFechaDeSemana(nombreDia) {
-  const dias = [
-    "Domingo",
-    "Lunes",
-    "Martes",
-    "Miércoles",
-    "Jueves",
-    "Viernes",
-    "Sábado",
-  ];
+  const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
   const hoy = new Date();
   const indiceDeseado = dias.indexOf(nombreDia);
   const fecha = new Date(hoy);
-
-  // Ajustamos la fecha al día de la semana seleccionado
   const diferencia = indiceDeseado - hoy.getDay();
   fecha.setDate(hoy.getDate() + diferencia);
-
   return fecha.toISOString().split("T")[0];
 }
 
@@ -120,8 +113,7 @@ function fetchEucariota() {
   const tbody = document.getElementById("tbody");
   const latencyBox = document.getElementById("latencyStats");
 
-  tbody.innerHTML =
-    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando base de datos...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando base de datos Eucariota...</td></tr>';
 
   const startTime = performance.now();
   latencyBox.style.display = "none";
@@ -130,64 +122,40 @@ function fetchEucariota() {
     .then((r) => r.json())
     .then((data) => {
       const endTime = performance.now();
-      const duration = (endTime - startTime).toFixed(0);
-      latencyBox.innerText = `⏱️ Tiempo de carga: ${duration} ms`;
+      latencyBox.innerText = `⏱️ Tiempo de carga: ${(endTime - startTime).toFixed(0)} ms`;
       latencyBox.style.display = "inline-block";
-      tbody.innerHTML = "";
 
       if (data.status === "error") {
         tbody.innerHTML = `<tr><td colspan="2" style="color:red; text-align:center; padding:20px;">Error: ${data.message}</td></tr>`;
         return;
       }
 
-      let agenda = {};
-      const initHora = (h) => {
-        if (!agenda[h]) agenda[h] = { guardias: [], faltas: [] };
-      };
+      // Transformamos los datos de Eucariota al formato común
+      let formateados = [];
 
-      data.guardias.forEach((item) => {
-        initHora(item.hora);
-        agenda[item.hora].guardias = item.profesores;
-      });
-
-      data.faltas.forEach((item) => {
-        initHora(item.hora);
-        agenda[item.hora].faltas.push({
-          profe: item.profesor,
-          aula: item.aula,
+      // Procesar guardias
+      data.guardias.forEach((g) => {
+        g.profesores.forEach((profe) => {
+          formateados.push({
+            hora: g.hora,
+            responsable: profe,
+            sujeto: null,
+            lugar: null
+          });
         });
       });
 
-      let horasPresentes = Object.keys(agenda).sort(
-        (a, b) => ORDEN_VISUAL.indexOf(a) - ORDEN_VISUAL.indexOf(b),
-      );
-
-      if (horasPresentes.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:40px; color:#137333; font-weight:bold;">Agenda libre para el ${dia}.</td></tr>`;
-        return;
-      }
-
-      horasPresentes.forEach((hora) => {
-        let info = agenda[hora];
-        let tr = document.createElement("tr");
-        let htmlGuardias =
-          info.guardias.length > 0
-            ? `<ul class="guard-list">${info.guardias.map((p) => `<li>${p}</li>`).join("")}</ul>`
-            : '<span class="no-guards">⚠️ ALERTA: NADIE DISPONIBLE</span>';
-
-        let htmlFaltas =
-          info.faltas.length > 0
-            ? info.faltas
-                .map(
-                  (f) =>
-                    `<div class="falta-card"><span class="falta-profe">${f.profe}</span><span class="falta-aula">${f.aula}</span></div>`,
-                )
-                .join("")
-            : '<span class="sin-faltas">Sin incidencias</span>';
-
-        tr.innerHTML = `<td width="40%"><span class="periodo-display">${hora}</span>${htmlGuardias}</td><td width="60%">${htmlFaltas}</td>`;
-        tbody.appendChild(tr);
+      // Procesar faltas
+      data.faltas.forEach((f) => {
+        formateados.push({
+          hora: f.hora,
+          responsable: null,
+          sujeto: f.profesor,
+          lugar: f.aula
+        });
       });
+
+      renderizarTablaExterna(formateados);
     });
 }
 
@@ -197,24 +165,14 @@ async function fetchJotasones() {
   const diaSeleccionado = document.getElementById("selDia").value;
   const fechaStr = obtenerFechaDeSemana(diaSeleccionado);
 
-  // 1. Mostrar mensaje de carga y resetear cronómetro
-  tbody.innerHTML =
-    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando Jotasones para el día ' +
-    fechaStr +
-    "...</td></tr>";
+  tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando Jotasones...</td></tr>';
   const startTime = performance.now();
-  latencyBox.style.display = "none";
 
   try {
-    const res = await fetch(
-      `http://localhost:3000/api/panel?fecha=${fechaStr}`,
-    );
+    const res = await fetch(`http://localhost:3000/api/panel?fecha=${fechaStr}`);
     const data = await res.json();
-
-    // 2. Calcular tiempo y mostrarlo
     const endTime = performance.now();
-    const duration = (endTime - startTime).toFixed(0);
-    latencyBox.innerText = `⏱️ Tiempo de carga: ${duration} ms`;
+    latencyBox.innerText = `⏱️ Tiempo de carga: ${(endTime - startTime).toFixed(0)} ms`;
     latencyBox.style.display = "inline-block";
 
     const formateados = data.map((d) => ({
@@ -224,10 +182,9 @@ async function fetchJotasones() {
       lugar: d.grupo,
       nota: d.tarea,
     }));
-    renderizarTablaExterna(formateados, "Jotasones");
+    renderizarTablaExterna(formateados);
   } catch (e) {
     alert("Error Jotasones (Puerto 3000)");
-    tbody.innerHTML = "";
   }
 }
 
@@ -237,69 +194,49 @@ async function fetchMoteros() {
   const diaStr = document.getElementById("selDia").value;
   const fechaStr = obtenerFechaDeSemana(diaStr);
 
-  tbody.innerHTML =
-    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando Moteros...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando Moteros...</td></tr>';
   const startTime = performance.now();
 
   try {
-    const res = await fetch(
-      `http://localhost:3001/api/panel?diaSemana=${diaStr}&fecha=${fechaStr}`,
-    );
+    const res = await fetch(`http://localhost:3001/api/panel?diaSemana=${diaStr}&fecha=${fechaStr}`);
     const data = await res.json();
-
     const endTime = performance.now();
     latencyBox.innerText = `⏱️ Tiempo de carga: ${(endTime - startTime).toFixed(0)} ms`;
     latencyBox.style.display = "inline-block";
 
-    // Mapeamos las ausencias buscando al responsable de guardia
     const formateados = data.ausencias.map((ausencia) => {
-      // Buscamos profesores de guardia en la misma hora que estén 'disponibles'
       const guardiasEnEsaHora = data.guardias
         .filter((g) => g.hora === ausencia.hora && g.status === "disponible")
         .map((g) => `${g.profesor.nombre} ${g.profesor.apellidos}`);
 
       return {
         hora: ausencia.hora,
-        // Si hay guardias, ponemos sus nombres; si no, avisamos
-        responsable:
-          guardiasEnEsaHora.length > 0
-            ? guardiasEnEsaHora.join(", ")
-            : "⚠️ Sin guardia asignado",
+        responsable: guardiasEnEsaHora.length > 0 ? guardiasEnEsaHora.join(", ") : null,
         sujeto: `${ausencia.profesor.nombre} ${ausencia.profesor.apellidos}`,
         lugar: ausencia.grupo,
         nota: ausencia.tarea,
       };
     });
-
-    renderizarTablaExterna(formateados, "Moteros");
+    renderizarTablaExterna(formateados);
   } catch (e) {
-    console.error(e);
     alert("Error conectando con el servidor de Moteros (Puerto 3001)");
-    tbody.innerHTML = "";
   }
 }
 
 async function fetchDuostream() {
   const tbody = document.getElementById("tbody");
   const latencyBox = document.getElementById("latencyStats");
-  const urlCSV =
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vRLBHYrwNyk20UoDwqBu-zfDXWSyeRtsg536axelI0eEHYsovoMiwgoS82tjGRy6Tysw3Pj6ovDiyzo/pub?gid=1908899796&single=true&output=csv";
+  const urlCSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRLBHYrwNyk20UoDwqBu-zfDXWSyeRtsg536axelI0eEHYsovoMiwgoS82tjGRy6Tysw3Pj6ovDiyzo/pub?gid=1908899796&single=true&output=csv";
   const diaSeleccionado = document.getElementById("selDia").value;
 
-  // 1. Iniciar carga
-  tbody.innerHTML =
-    '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando base de datos (Duostream CSV)...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando Duostream CSV...</td></tr>';
   const startTime = performance.now();
-  latencyBox.style.display = "none";
 
   try {
     const res = await fetch(urlCSV);
     const texto = await res.text();
-
-    // 2. Finalizar cronómetro
     const endTime = performance.now();
-    const duration = (endTime - startTime).toFixed(0);
-    latencyBox.innerText = `⏱️ Tiempo de carga: ${duration} ms`;
+    latencyBox.innerText = `⏱️ Tiempo de carga: ${(endTime - startTime).toFixed(0)} ms`;
     latencyBox.style.display = "inline-block";
 
     const lineas = texto.split("\n").slice(1);
@@ -309,7 +246,7 @@ async function fetchDuostream() {
         return {
           dia: c[0]?.trim(),
           hora: (c[1] ? c[1] + "ª Hora" : "") + (c[2] ? " (" + c[2] + ")" : ""),
-          responsable: c[3] === "GUARDIA" ? c[4] : "Por asignar",
+          responsable: c[3] === "GUARDIA" ? c[4] : null,
           sujeto: c[4],
           lugar: c[5],
           nota: c[6],
@@ -317,9 +254,8 @@ async function fetchDuostream() {
       })
       .filter((f) => f.dia === diaSeleccionado);
 
-    renderizarTablaExterna(formateados, "Duostream");
+    renderizarTablaExterna(formateados);
   } catch (e) {
     alert("Error al leer CSV de Duostream");
-    tbody.innerHTML = "";
   }
 }
