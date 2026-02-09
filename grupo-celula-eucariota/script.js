@@ -105,12 +105,12 @@ function generarDias() {
 }
 
 // --- NUEVA FUNCIÓN GENÉRICA PARA PINTAR DATOS EXTERNOS ---
-function renderizarTablaExterna(datosOriginales, titulo) {
+function renderizarTablaExterna(datosOriginales) {
   const tbody = document.getElementById("tbody");
   tbody.innerHTML = "";
 
   if (datosOriginales.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:40px; color:#137333; font-weight:bold;">Sin incidencias en ${titulo}.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:40px; color:#137333; font-weight:bold;">Sin incidencias.</td></tr>`;
     return;
   }
 
@@ -241,7 +241,7 @@ async function fetchMoteros() {
   const tbody = document.getElementById("tbody");
   const latencyBox = document.getElementById("latencyStats");
   const diaStr = document.getElementById("selDia").value;
-  const fechaStr = new Date().toISOString().split("T")[0];
+  const fechaStr = obtenerFechaDeSemana(diaStr);
 
   tbody.innerHTML =
     '<tr><td colspan="2" style="text-align:center; padding:40px; font-size:18px;">🔄 Consultando Moteros...</td></tr>';
