@@ -13,6 +13,13 @@ const ORDEN_VISUAL = [
 
 window.onload = function () {
   generarDias();
+  
+  const loadTime = performance.now();
+  const loadStats = document.getElementById("pageLoadStats");
+  
+  if (loadStats) {
+    loadStats.innerHTML = `Página: ${loadTime.toFixed(0)}ms`;
+  }
 };
 
 function generarDias() {
@@ -122,7 +129,7 @@ function fetchEucariota() {
     .then((r) => r.json())
     .then((data) => {
       const endTime = performance.now();
-      latencyBox.innerText = `⏱️ Tiempo de carga: ${(endTime - startTime).toFixed(0)} ms`;
+      latencyBox.innerText = `Fetch: ${(endTime - startTime).toFixed(0)} ms`;
       latencyBox.style.display = "inline-block";
 
       if (data.status === "error") {
@@ -130,7 +137,6 @@ function fetchEucariota() {
         return;
       }
 
-      // Transformamos los datos de Eucariota al formato común
       let formateados = [];
 
       // Procesar guardias
@@ -172,7 +178,7 @@ async function fetchJotasones() {
     const res = await fetch(`http://localhost:3000/api/panel?fecha=${fechaStr}`);
     const data = await res.json();
     const endTime = performance.now();
-    latencyBox.innerText = `⏱️ Tiempo de carga: ${(endTime - startTime).toFixed(0)} ms`;
+    latencyBox.innerText = `Fetch: ${(endTime - startTime).toFixed(0)} ms`;
     latencyBox.style.display = "inline-block";
 
     const formateados = data.map((d) => ({
@@ -201,7 +207,7 @@ async function fetchMoteros() {
     const res = await fetch(`http://localhost:3001/api/panel?diaSemana=${diaStr}&fecha=${fechaStr}`);
     const data = await res.json();
     const endTime = performance.now();
-    latencyBox.innerText = `⏱️ Tiempo de carga: ${(endTime - startTime).toFixed(0)} ms`;
+    latencyBox.innerText = `Fetch: ${(endTime - startTime).toFixed(0)} ms`;
     latencyBox.style.display = "inline-block";
 
     const formateados = data.ausencias.map((ausencia) => {
@@ -236,7 +242,7 @@ async function fetchDuostream() {
     const res = await fetch(urlCSV);
     const texto = await res.text();
     const endTime = performance.now();
-    latencyBox.innerText = `⏱️ Tiempo de carga: ${(endTime - startTime).toFixed(0)} ms`;
+    latencyBox.innerText = `Fetch: ${(endTime - startTime).toFixed(0)} ms`;
     latencyBox.style.display = "inline-block";
 
     const lineas = texto.split("\n").slice(1);
